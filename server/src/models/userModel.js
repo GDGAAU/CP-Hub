@@ -1,6 +1,6 @@
-import db from "../config/db";
+import db from "../config/db.js";
 
-export default User = {
+const User = {
   byEmailUsername: async (email) => {
     const result = await db.query(
       `select * from users where email = $1 or username = $1`,
@@ -51,3 +51,5 @@ export default User = {
     return newUser.rows[0];
   },
 };
+
+export default User;
