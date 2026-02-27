@@ -11,8 +11,8 @@ export const registerUser = async (req, res) => {
       return res.status(409).json({ message: "Email already exists!" });
     }
     const name = `${fname} ${lname}`;
-    const hashedPassword = await bcrypt.hash;
-    (password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log(name);
     const newUser = await User.newUserLocal(
       name,
       email,
@@ -30,7 +30,10 @@ export const registerUser = async (req, res) => {
         .json({ message: "Registration Successful", user: newUser });
     });
   } catch (err) {
-    console.log("Error registering user using the local method");
-    res.status(500).json({ message: "Registration Error!" });
+    console.log("Error registering user using the local method", err.message);
+    console.error(err.stack);
+    res
+      .status(500)
+      .json({ message: "Local Registration Error!", error: err.message });
   }
 };

@@ -15,6 +15,7 @@ router.get("/user", (req, res) => {
     res.status(401).json({ message: "User not logged in!" });
   }
 });
+// Send even the message in the name username
 router.post("/login", passport.authenticate("local"), (req, res) => {
   res.json({ user: req.user });
 });
@@ -36,7 +37,9 @@ router.get(
 router.get("/logout", (req, res, next) => {
   req.logout((err) => {
     if (err) next(err);
-    res.redirect(`${clientUrl}`);
+    res.json("User logged out Successfully");
+    // res.redirect(`${clientUrl}`);
+    // Uncomment the redirect when working with frontend
   });
 });
 export default router;

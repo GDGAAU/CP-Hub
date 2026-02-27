@@ -2,7 +2,7 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth2";
 import { Strategy as LocalStrategy } from "passport-local";
 import "dotenv/config";
 import passport from "passport";
-import User from "../models/userModel";
+import User from "../models/userModel.js";
 import bcrypt from "bcrypt";
 
 const configurePassport = () => {

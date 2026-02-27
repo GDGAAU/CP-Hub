@@ -5,12 +5,14 @@ import bodyParser from "body-parser";
 import passport from "passport";
 import "dotenv/config";
 import authRoutes from "./src/routes/authRoutes.js";
+import configurePassport from "./src/config/passport.js";
 
 const app = express();
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 const port = process.env.SERVER_PORT;
-
+configurePassport();
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
