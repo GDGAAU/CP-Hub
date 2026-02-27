@@ -2,13 +2,14 @@ import passport from "passport";
 import express from "express";
 import "dotenv/config";
 import { registerUser } from "../controllers/authController.js";
+import { ensureAuthenticated } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 const clientUrl = process.env.CLIENT_URL;
 
 router.post("/register", registerUser);
-router.get("/user", (req, res) => {
+router.get("/user", ensureAuthenticated, (req, res) => {
   if (req.isAuthenticated()) {
     res.json({ user: req.user });
   } else {
@@ -20,7 +21,7 @@ router.post("/login", passport.authenticate("local"), (req, res) => {
   res.json({ user: req.user });
 });
 router.get(
-  "google",
+  "/google",
   passport.authenticate("google", {
     scope: ["profile", "email"],
   }),
@@ -34,7 +35,7 @@ router.get(
     res.redirect(`${clientUrl}/dashboard`);
   },
 );
-router.get("/logout", (req, res, next) => {
+router.get("/logout", ensureAuthenticated, (req, res, next) => {
   req.logout((err) => {
     if (err) next(err);
     res.json("User logged out Successfully");

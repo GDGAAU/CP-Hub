@@ -38,12 +38,13 @@ const User = {
     }
     return newUser.rows[0];
   },
-  newUserLocal: async (name, email, password, profileImg, username) => {
+  newUserLocal: async (name, email, password, profileImg, role, username) => {
     // Automatically role set as memeber
     // Dont forget to implement the profile image path before testing
+    const userRole = role ? role : "member";
     const newUser = await db.query(
-      `insert into users(name, email, password, profile_img, username) values ($1, $2, $3, $4, $5) returning *`,
-      [name, email, password, profileImg, username],
+      `insert into users(name, email, password, profile_img, role, username) values ($1, $2, $3, $4, $5, $6) returning *`,
+      [name, email, password, profileImg, userRole, username],
     );
     if (newUser.rows.length === 0) {
       return null;
