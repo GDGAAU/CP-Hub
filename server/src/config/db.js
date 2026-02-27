@@ -1,0 +1,11 @@
+import pg from "pg";
+import "dotenv/config";
+
+const db = new pg.Pool({
+  database: process.env.DB_DATABASE,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+  host: process.env.DB_HOST,
+});
+export default db;
