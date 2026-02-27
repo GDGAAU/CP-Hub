@@ -24,6 +24,7 @@ const configurePassport = () => {
       }
     }),
   );
+  // admins are not allowed to use google to signup
   passport.use(
     "google",
     new GoogleStrategy(
