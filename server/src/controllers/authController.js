@@ -3,7 +3,7 @@ import User from "../models/userModel.js";
 import "dotenv/config";
 
 export const registerUser = async (req, res) => {
-  const { fname, lname, email, username, password } = req.body;
+  const { fname, lname, email, role, username, password } = req.body;
   const profileImg = process.env.PROFILE_PLACEHOLDER;
   try {
     const user = await User.byEmail(email);
@@ -18,6 +18,7 @@ export const registerUser = async (req, res) => {
       email,
       hashedPassword,
       profileImg,
+      role,
       username,
     );
     req.login(newUser, (err) => {
