@@ -1,15 +1,45 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 
 const Register = () => {
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { checkAuth } = useAuth();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    setError("");
+    setLoading(true);
+    try {
+      const names = name.split(" ");
+      const fname = names[0];
+      const lname = names.slice(1).join(" ") || "";
+      
+      await axios.post("http://localhost:5000/api/auth/register", {
+        fname,
+        lname,
+        username,
+        email,
+        password
+      });
+      await checkAuth();
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.response?.data?.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputStyle = {
@@ -70,8 +100,22 @@ const Register = () => {
             marginBottom: "24px",
           }}
         >
-          Join ALGOLAB and start your coding journey.
+          Join CP-HUB and start your coding journey.
         </p>
+
+        {error && (
+          <div style={{ 
+            padding: "10px", 
+            marginBottom: "16px", 
+            backgroundColor: "rgba(239, 68, 68, 0.1)", 
+            color: "#ef4444", 
+            borderRadius: "8px", 
+            fontSize: "0.875rem",
+            border: "1px solid rgba(239, 68, 68, 0.2)"
+          }}>
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div>
@@ -81,6 +125,24 @@ const Register = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your name"
+              required
+              style={inputStyle}
+              onFocus={(e) => {
+                e.target.style.borderColor = "#135bec";
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = "rgba(255, 255, 255, 0.08)";
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="choose_a_username"
               required
               style={inputStyle}
               onFocus={(e) => {
@@ -221,7 +283,7 @@ const Register = () => {
                 marginBottom: "8px",
               }}
             >
-              © 2024 AlgoLab competitive programming platform built for developers by developers
+              © 2024 CP-HUB competitive programming platform built for developers by developers
             </div>
             <div
               style={{

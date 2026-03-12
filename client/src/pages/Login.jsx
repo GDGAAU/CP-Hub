@@ -1,15 +1,30 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate("/dashboard");
+    setError("");
+    setLoading(true);
+    try {
+      const success = await login(email, password);
+      if (success) {
+        navigate("/dashboard");
+      } else {
+        setError("Invalid credentials. Please try again.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -78,7 +93,7 @@ export default function Login() {
                 fontSize: "1.25rem",
               }}
             >
-              CodeLogic
+              CP-HUB
             </span>
           </div>
           <h1
@@ -207,8 +222,22 @@ export default function Login() {
               marginBottom: "24px",
             }}
           >
-            Sign in to continue to CodeLogic
+            Sign in to continue to CP-HUB
           </p>
+
+          {error && (
+            <div style={{ 
+              padding: "10px", 
+              marginBottom: "16px", 
+              backgroundColor: "rgba(239, 68, 68, 0.1)", 
+              color: "#ef4444", 
+              borderRadius: "8px", 
+              fontSize: "0.875rem",
+              border: "1px solid rgba(239, 68, 68, 0.2)"
+            }}>
+              {error}
+            </div>
+          )}
 
           <form
             onSubmit={handleSubmit}
@@ -473,7 +502,7 @@ export default function Login() {
                   marginBottom: "8px",
                 }}
               >
-                © 2024 CodeLogic platform. All rights reserved.
+                © 2024 CP-HUB platform. All rights reserved.
               </div>
               <div
                 style={{

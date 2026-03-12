@@ -1,18 +1,7 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 import ProblemRow from "../components/ProblemRow";
-
-const DUMMY_PROBLEMS = [
-  { id: 1, title: "Two Sum", difficulty: "Easy", acceptance: 49.5, solved: true, topic: "Arrays" },
-  { id: 2, title: "Add Two Numbers", difficulty: "Medium", acceptance: 38.2, solved: false, topic: "Strings" },
-  { id: 3, title: "Longest Substring Without Repeating Characters", difficulty: "Medium", acceptance: 33.1, solved: false, topic: "Strings" },
-  { id: 4, title: "Median of Two Sorted Arrays", difficulty: "Hard", acceptance: 32.8, solved: false, topic: "Arrays" },
-  { id: 5, title: "Valid Parentheses", difficulty: "Easy", acceptance: 40.2, solved: true, topic: "Strings" },
-  { id: 6, title: "Merge Two Sorted Lists", difficulty: "Easy", acceptance: 56.1, solved: false, topic: "Trees" },
-  { id: 7, title: "Reverse Integer", difficulty: "Easy", acceptance: 26.8, solved: true, topic: "Arrays" },
-  { id: 8, title: "Trapping Rain Water", difficulty: "Hard", acceptance: 54.2, solved: false, topic: "DP" },
-  { id: 9, title: "Course Schedule", difficulty: "Medium", acceptance: 44.1, attempted: true, solved: false, topic: "Graphs" },
-];
 
 const DIFFICULTY_OPTIONS = ["All", "Easy", "Medium", "Hard"];
 const STATUS_OPTIONS = [
@@ -63,19 +52,39 @@ const ProblemList = () => {
   const [difficultyFilter, setDifficultyFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("all");
   const [topicFilter, setTopicFilter] = useState("All Topics");
+  const [problems, setProblems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProblems = async () => {
+      try {
+        // Replace with environment variable later if needed
+        const res = await axios.get("http://localhost:5000/api/problems", { withCredentials: true });
+        setProblems(res.data);
+      } catch (err) {
+        console.error("Error fetching problems:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProblems();
+  }, []);
 
   const filteredProblems = useMemo(() => {
-    return DUMMY_PROBLEMS.filter((p) => {
+    return problems.filter((p) => {
       const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase());
       const matchesDifficulty = difficultyFilter === "All" || p.difficulty === difficultyFilter;
       const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "solved" && p.solved) ||
         (statusFilter === "attempted" && (p.attempted || p.solved));
-      const matchesTopic = topicFilter === "All Topics" || p.topic === topicFilter;
+
+      // PostgreSQL array representation needs checking
+      const matchesTopic = topicFilter === "All Topics" || (p.category_tags && p.category_tags.includes(topicFilter));
+
       return matchesSearch && matchesDifficulty && matchesStatus && matchesTopic;
     });
-  }, [search, difficultyFilter, statusFilter, topicFilter]);
+  }, [search, difficultyFilter, statusFilter, topicFilter, problems]);
 
   const inputStyle = {
     flex: 1,
@@ -195,10 +204,10 @@ const ProblemList = () => {
                     d === "Easy"
                       ? "#10b981"
                       : d === "Medium"
-                      ? "#f59e0b"
-                      : d === "Hard"
-                      ? "#ef4444"
-                      : "transparent",
+                        ? "#f59e0b"
+                        : d === "Hard"
+                          ? "#ef4444"
+                          : "transparent",
                   marginRight: d !== "All" ? "6px" : 0,
                   verticalAlign: "middle",
                 }}

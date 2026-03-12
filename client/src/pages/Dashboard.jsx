@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import StatsCard from "../components/StatsCard";
+import { useAuth } from "../context/AuthContext";
 
 const TOPICS = [
   { name: "Arrays & Strings", mastery: 85 },
@@ -39,22 +41,41 @@ const getStatusColor = (status) => {
 };
 
 const ACTIVITY_DAYS = 365;
-const getActivityData = () => {
-  const arr = [];
-  for (let i = 0; i < ACTIVITY_DAYS; i++) {
-    arr.push(Math.floor(Math.random() * 5));
-  }
-  return arr;
-};
 
 const Dashboard = () => {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const activity = getActivityData();
+  const [recentSubmissions, setRecentSubmissions] = useState([]);
+
+  useEffect(() => {
+    const fetchRecent = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/submissions/user", { withCredentials: true });
+        setRecentSubmissions(res.data.slice(0, 5));
+      } catch (err) {
+        console.error("Error fetching submissions:", err);
+      }
+    };
+    fetchRecent();
+  }, []);
 
   const searchLower = searchQuery.toLowerCase().trim();
   const matchesTopic = (name) => name.toLowerCase().includes(searchLower);
   const matchesProblem = (name) => name.toLowerCase().includes(searchLower);
   const matchesUser = (name) => name.toLowerCase().includes(searchLower);
+
+  const stats = user?.stats || { solved: {}, topics: [], accuracy: 0, current_streak: 0, activity: [] };
+
+  // Activity data processing
+  const activityMap = new Array(365).fill(0);
+  if (stats.activity) {
+    stats.activity.forEach(a => {
+      const diffDays = Math.floor((new Date() - new Date(a.date)) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 365) {
+        activityMap[364 - diffDays] = Math.min(parseInt(a.count) || 0, 4);
+      }
+    });
+  }
 
   return (
     <div style={{ width: "100%", padding: "0 24px" }}>
@@ -79,7 +100,7 @@ const Dashboard = () => {
               marginBottom: "8px",
             }}
           >
-            Welcome back, Alex 👋
+            Welcome back, {user?.name || user?.username || 'Analyst'} 👋
           </h1>
           <p
             style={{
@@ -148,28 +169,28 @@ const Dashboard = () => {
       >
         <StatsCard
           title="Total Solved"
-          value="42"
+          value={stats.solved?.total_solved || 0}
           subtitle="problems"
           variant="check"
-          progress={70}
+          progress={Math.min(Math.round(((stats.solved?.total_solved || 0) / 150) * 100), 100)}
         />
         <StatsCard
           title="Global Rank"
-          value="#128"
+          value={user?.rank ? `#${user.rank}` : "Unranked"}
           subtitle="out of 1,500"
           variant="trophy"
-          delta="+12"
+          delta="+2"
         />
         <StatsCard
           title="Current Streak"
-          value="7"
+          value={stats.current_streak || 0}
           subtitle="days"
           variant="flame"
         />
         <StatsCard
           title="Accuracy Rate"
-          value="78%"
-          subtitle="last 30 days"
+          value={`${stats.accuracy || 0}%`}
+          subtitle="overall"
           variant="percent"
         />
       </div>
@@ -226,8 +247,8 @@ const Dashboard = () => {
             </Link>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {TOPICS.filter((t) => !searchLower || matchesTopic(t.name)).map((t) => (
-              <div key={t.name}>
+            {stats.topics?.slice(0, 5).filter((t) => !searchLower || matchesTopic(t.topic)).map((t) => (
+              <div key={t.topic}>
                 <div
                   style={{
                     display: "flex",
@@ -236,8 +257,8 @@ const Dashboard = () => {
                     fontSize: "0.875rem",
                   }}
                 >
-                  <span style={{ color: "#c4c4c4", fontWeight: "500" }}>{t.name}</span>
-                  <span style={{ color: "#b5b5b4" }}>{t.mastery}%</span>
+                  <span style={{ color: "#c4c4c4", fontWeight: "500" }}>{t.topic}</span>
+                  <span style={{ color: "#b5b5b4" }}>{t.count} Solved</span>
                 </div>
                 <div
                   style={{
@@ -249,7 +270,7 @@ const Dashboard = () => {
                 >
                   <div
                     style={{
-                      width: `${t.mastery}%`,
+                      width: `${Math.min((t.count / (stats.solved?.total_solved || 1)) * 100, 100)}%`,
                       height: "100%",
                       backgroundColor: "#135bec",
                       borderRadius: "4px",
@@ -259,6 +280,7 @@ const Dashboard = () => {
                 </div>
               </div>
             ))}
+            {(!stats.topics || stats.topics.length === 0) && <p style={{ color: "#b5b5b4", fontSize: "0.875rem" }}>No mastery data yet. Solve problems to see progress!</p>}
           </div>
           <div style={{ marginTop: "24px" }}>
             <div
@@ -280,7 +302,7 @@ const Dashboard = () => {
                 overflow: "auto",
               }}
             >
-              {activity.map((level, i) => {
+              {activityMap.map((level, i) => {
                 const shades = ["#1b2334", "#1e2839", "#222d3d", "#253242", "#135bec"];
                 return (
                   <div
@@ -320,17 +342,17 @@ const Dashboard = () => {
             Team Standings
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {TEAM_STANDINGS.filter((t) => !searchLower || matchesUser(t.name)).map((user) => (
+            {TEAM_STANDINGS.filter((t) => !searchLower || matchesUser(t.name)).map((userStand) => (
               <div
-                key={user.rank}
+                key={userStand.rank}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: "12px",
                   padding: "12px",
                   borderRadius: "8px",
-                  backgroundColor: user.isUser ? "rgba(19, 91, 236, 0.12)" : "transparent",
-                  border: user.isUser ? "1px solid rgba(19, 91, 236, 0.25)" : "1px solid transparent",
+                  backgroundColor: userStand.isUser ? "rgba(19, 91, 236, 0.12)" : "transparent",
+                  border: userStand.isUser ? "1px solid rgba(19, 91, 236, 0.25)" : "1px solid transparent",
                 }}
               >
                 <span
@@ -341,23 +363,23 @@ const Dashboard = () => {
                     minWidth: "24px",
                   }}
                 >
-                  #{user.rank}
+                  #{userStand.rank}
                 </span>
                 <div
                   style={{
                     width: "32px",
                     height: "32px",
                     borderRadius: "50%",
-                    backgroundImage: `url('${user.avatar}')`,
+                    backgroundImage: `url('${userStand.avatar}')`,
                     backgroundSize: "cover",
                     border: "1px solid rgba(255, 255, 255, 0.08)",
                   }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "0.875rem", fontWeight: "500", color: user.isUser ? "#135bec" : "#c4c4c4" }}>
-                    {user.name}
+                  <div style={{ fontSize: "0.875rem", fontWeight: "500", color: userStand.isUser ? "#135bec" : "#c4c4c4" }}>
+                    {userStand.name}
                   </div>
-                  <div style={{ fontSize: "0.75rem", color: "#b5b5b4" }}>{user.rating}</div>
+                  <div style={{ fontSize: "0.75rem", color: "#b5b5b4" }}>{userStand.rating}</div>
                 </div>
               </div>
             ))}
@@ -449,11 +471,11 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {RECENT_SUBMISSIONS.filter((s) => !searchLower || matchesProblem(s.problem)).map((s, i) => (
+              {recentSubmissions.filter((s) => !searchLower || matchesProblem(s.problem_title || s.problem)).map((s, i) => (
                 <tr
                   key={i}
                   style={{
-                    borderBottom: i < RECENT_SUBMISSIONS.length - 1 ? "1px solid rgba(255, 255, 255, 0.05)" : "none",
+                    borderBottom: i < recentSubmissions.length - 1 ? "1px solid rgba(255, 255, 255, 0.05)" : "none",
                     transition: "background-color 0.15s",
                   }}
                   onMouseOver={(e) => {
@@ -463,7 +485,7 @@ const Dashboard = () => {
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
-                  <td style={{ padding: "14px 16px", fontSize: "0.875rem", color: "#c4c4c4", fontWeight: "500" }}>{s.problem}</td>
+                  <td style={{ padding: "14px 16px", fontSize: "0.875rem", color: "#c4c4c4", fontWeight: "500" }}>{s.problem_title || s.problem}</td>
                   <td style={{ padding: "14px 16px" }}>
                     <span
                       style={{
@@ -481,7 +503,7 @@ const Dashboard = () => {
                   </td>
                   <td style={{ padding: "14px 16px", fontSize: "0.875rem", fontWeight: "500", color: getStatusColor(s.status) }}>{s.status}</td>
                   <td style={{ padding: "14px 16px", fontSize: "0.875rem", color: "#b5b5b4" }}>{s.language}</td>
-                  <td style={{ padding: "14px 16px", fontSize: "0.875rem", color: "#b5b5b4" }}>{s.time}</td>
+                  <td style={{ padding: "14px 16px", fontSize: "0.875rem", color: "#b5b5b4" }}>{new Date(s.timestamp).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>

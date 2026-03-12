@@ -105,7 +105,7 @@ const ProblemRow = ({ problem }) => {
           verticalAlign: "middle",
         }}
       >
-        {problem.topic}
+        {problem.category_tags && problem.category_tags[0]}
       </td>
     </tr>
   );

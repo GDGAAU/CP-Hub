@@ -1,74 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 
-const DUMMY_SUBMISSIONS = [
-  { 
-    id: 1, 
-    status: "Accepted", 
-    problemName: "Two Sum", 
-    problemId: "1", 
-    topic: "Arrays", 
-    language: "Python 3", 
-    runtime: "42 ms", 
-    memory: "14.2 MB", 
-    submittedAt: "2024-01-15 14:32:10"
-  },
-  { 
-    id: 2, 
-    status: "Wrong Answer", 
-    problemName: "Valid Parentheses", 
-    problemId: "20", 
-    topic: "Stack", 
-    language: "JavaScript", 
-    runtime: "68 ms", 
-    memory: "42.1 MB", 
-    submittedAt: "2024-01-15 13:45:22"
-  },
-  { 
-    id: 3, 
-    status: "Time Limit Exceeded", 
-    problemName: "Merge K Sorted Lists", 
-    problemId: "23", 
-    topic: "Linked List", 
-    language: "C++", 
-    runtime: ">2000 ms", 
-    memory: "45.8 MB", 
-    submittedAt: "2024-01-15 12:18:45"
-  },
-  { 
-    id: 4, 
-    status: "Accepted", 
-    problemName: "Binary Tree Level Order", 
-    problemId: "102", 
-    topic: "Tree", 
-    language: "Java", 
-    runtime: "1 ms", 
-    memory: "42.3 MB", 
-    submittedAt: "2024-01-15 11:22:33"
-  },
-  { 
-    id: 5, 
-    status: "Runtime Error", 
-    problemName: "Longest Substring Without Repeating", 
-    problemId: "3", 
-    topic: "Sliding Window", 
-    language: "Python 3", 
-    runtime: "-", 
-    memory: "-", 
-    submittedAt: "2024-01-15 10:15:27"
-  },
-  { 
-    id: 6, 
-    status: "Accepted", 
-    problemName: "Add Two Numbers", 
-    problemId: "2", 
-    topic: "Linked List", 
-    language: "Python 3", 
-    runtime: "68 ms", 
-    memory: "16.4 MB", 
-    submittedAt: "2024-01-15 09:42:18"
-  },
-];
 
 const getStatusBadge = (status) => {
   const colors = {
@@ -77,9 +11,9 @@ const getStatusBadge = (status) => {
     "Time Limit Exceeded": { bg: "rgba(245, 158, 11, 0.15)", color: "#f59e0b" },
     "Runtime Error": { bg: "rgba(239, 68, 68, 0.15)", color: "#ef4444" }
   };
-  
+
   const style = colors[status] || colors["Wrong Answer"];
-  
+
   return (
     <span
       style={{
@@ -100,6 +34,9 @@ const getStatusBadge = (status) => {
 
 const SubmissionHistory = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [submissions, setSubmissions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("All Topics");
   const [selectedStatus, setSelectedStatus] = useState("All Status");
@@ -107,8 +44,33 @@ const SubmissionHistory = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showToast, setShowToast] = useState(false);
 
-  const topics = ["All Topics", "Arrays", "Stack", "Linked List", "Tree", "Sliding Window"];
-  const statuses = ["All Status", "Accepted", "Wrong Answer", "Time Limit Exceeded", "Runtime Error"];
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/submissions/user", { withCredentials: true });
+        setSubmissions(res.data);
+      } catch (err) {
+        console.error("Error fetching submissions:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSubmissions();
+  }, []);
+
+  const filteredSubmissions = submissions.filter(s => {
+    const title = s.problem_title || s.problemName || "Unknown Problem";
+    const matchesSearch = title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(s.problem_id || "").includes(searchTerm);
+    const matchesStatus = selectedStatus === "All Status" || s.status === selectedStatus;
+    const matchesLanguage = selectedLanguage === "Language" || s.language === selectedLanguage;
+    return matchesSearch && matchesStatus && matchesLanguage;
+  });
+
+  const stats = user?.stats || { solved: { total_solved: 0 }, accuracy: 0 };
+
+  const topics = ["All Topics", "Arrays", "Stack", "Linked List", "Tree", "Sliding Window", "DP", "Graphs", "Strings"];
+  const statuses = ["All Status", "Accepted", "Wrong Answer", "Time Limit Exceeded", "Runtime Error", "Pending"];
   const languages = ["Language", "Python 3", "JavaScript", "C++", "Java"];
 
   const handleResetFilters = () => {
@@ -230,7 +192,7 @@ const SubmissionHistory = () => {
                 }}
               >
                 <div style={{ fontSize: "0.75rem", color: "#b5b5b4", marginBottom: "4px" }}>SUCCESS RATE</div>
-                <div style={{ fontSize: "1.125rem", fontWeight: "700", color: "#10b981" }}>74.2%</div>
+                <div style={{ fontSize: "1.125rem", fontWeight: "700", color: "#10b981" }}>{stats.accuracy}%</div>
               </div>
               <div
                 style={{
@@ -241,7 +203,7 @@ const SubmissionHistory = () => {
                 }}
               >
                 <div style={{ fontSize: "0.75rem", color: "#b5b5b4", marginBottom: "4px" }}>TOTAL SOLVED</div>
-                <div style={{ fontSize: "1.125rem", fontWeight: "700", color: "#135bec" }}>128</div>
+                <div style={{ fontSize: "1.125rem", fontWeight: "700", color: "#135bec" }}>{stats.solved?.total_solved || 0}</div>
               </div>
             </div>
           </div>
@@ -380,11 +342,11 @@ const SubmissionHistory = () => {
               </tr>
             </thead>
             <tbody>
-              {DUMMY_SUBMISSIONS.map((submission, index) => (
+              {filteredSubmissions.map((submission, index) => (
                 <tr
                   key={submission.id}
                   style={{
-                    borderBottom: index < DUMMY_SUBMISSIONS.length - 1 ? "1px solid rgba(255, 255, 255, 0.05)" : "none",
+                    borderBottom: index < filteredSubmissions.length - 1 ? "1px solid rgba(255, 255, 255, 0.05)" : "none",
                     transition: "background-color 0.15s",
                   }}
                   onMouseOver={(e) => {
@@ -399,28 +361,28 @@ const SubmissionHistory = () => {
                   </td>
                   <td style={{ padding: "16px", color: "#c4c4c4", fontSize: "0.875rem", fontWeight: "500" }}>
                     <Link
-                      to={`/problems/${submission.problemId}`}
+                      to={`/problems/${submission.problem_id}`}
                       style={{ color: "#c4c4c4", textDecoration: "none" }}
                       onMouseOver={(e) => { e.target.style.color = "#135bec"; }}
                       onMouseOut={(e) => { e.target.style.color = "#c4c4c4"; }}
                     >
-                      {submission.problemName}
+                      {submission.problem_title}
                     </Link>
                   </td>
                   <td style={{ padding: "16px", color: "#b5b5b4", fontSize: "0.875rem" }}>
-                    {submission.topic}
+                    {submission.category_tags && submission.category_tags[0]}
                   </td>
                   <td style={{ padding: "16px", color: "#b5b5b4", fontSize: "0.875rem" }}>
                     {submission.language}
                   </td>
                   <td style={{ padding: "16px", color: "#b5b5b4", fontSize: "0.875rem" }}>
-                    {submission.runtime}
+                    {submission.runtime} ms
                   </td>
                   <td style={{ padding: "16px", color: "#b5b5b4", fontSize: "0.875rem" }}>
-                    {submission.memory}
+                    {submission.memory} KB
                   </td>
                   <td style={{ padding: "16px", color: "#b5b5b4", fontSize: "0.875rem" }}>
-                    {submission.submittedAt}
+                    {new Date(submission.timestamp).toLocaleString()}
                   </td>
                   <td style={{ padding: "16px" }}>
                     <button
@@ -456,7 +418,7 @@ const SubmissionHistory = () => {
           {/* Pagination */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px", borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}>
             <div style={{ fontSize: "0.875rem", color: "#b5b5b4" }}>
-              Showing 1 to 6 of 128 submissions
+              Showing {filteredSubmissions.length} submissions
             </div>
             <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               <button

@@ -11,11 +11,11 @@ const Navbar = () => {
         <path d="M12 2L2 7l10 5 10-5-10-5z" />
         <path d="M2 17l10 5 10-5" />
       </svg>
-      <span style={{ color: "#c4c4c4" }}>ALGO</span>
-      <span style={{ color: "#135bec" }}>LAB</span>
+      <span style={{ color: "#c4c4c4" }}>CP-</span>
+      <span style={{ color: "#135bec" }}>HUB</span>
     </>
   ) : (
-    "CPELITE"
+    "CP-HUB"
   );
 
   const navStyle = {

@@ -1,5 +1,8 @@
-import React, { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import ReactMarkdown from "react-markdown";
+import Split from "react-split";
 import CodeEditor from "../components/CodeEditor";
 
 const DIFFICULTY_STYLES = {
@@ -8,45 +11,39 @@ const DIFFICULTY_STYLES = {
   Hard: { bg: "rgba(239, 68, 68, 0.2)", text: "#ef4444" },
 };
 
-const DUMMY_PROBLEM = {
-  id: 1,
-  title: "Two Sum",
-  difficulty: "Easy",
-  topic: "Arrays",
-  description: `Given an array of integers \`nums\` and an integer \`target\`, return indices of the two numbers such that they add up to \`target\`.
-
-You may assume that each input would have exactly one solution, and you may not use the same element twice. You can return the answer in any order.`,
-  examples: [
-    {
-      input: "nums = [2, 7, 11, 15], target = 9",
-      output: "[0, 1]",
-      explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
-    },
-    {
-      input: "nums = [3, 2, 4], target = 6",
-      output: "[1, 2]",
-      explanation: null,
-    },
-  ],
-  constraints: [
-    "2 <= nums.length <= 10^4",
-    "-10^9 <= nums[i] <= 10^9",
-    "Only one valid answer exists.",
-  ],
-};
-
-const DEFAULT_CODE = `function twoSum(nums, target) {
+const DEFAULT_CODE = `function solve(nums, target) {
   // Your code here
   return [];
 }`;
 
 const ProblemDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const [problem, setProblem] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [code, setCode] = useState(DEFAULT_CODE);
   const [language, setLanguage] = useState("JavaScript");
   const [consoleOutput, setConsoleOutput] = useState("");
 
-  const difficultyStyles = DIFFICULTY_STYLES[DUMMY_PROBLEM.difficulty] ?? {
+  useEffect(() => {
+    const fetchProblem = async () => {
+      try {
+        const res = await axios.get(`http://localhost:5000/api/problems/${id}`, { withCredentials: true });
+        setProblem(res.data);
+      } catch (err) {
+        console.error("Error fetching problem:", err);
+        setConsoleOutput("Failed to load problem.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProblem();
+  }, [id]);
+
+  if (loading) return <div style={{ color: "#c4c4c4", padding: "20px" }}>Loading problem...</div>;
+  if (!problem) return <div style={{ color: "#ef4444", padding: "20px" }}>Problem not found.</div>;
+
+  const difficultyStyles = DIFFICULTY_STYLES[problem.difficulty] ?? {
     bg: "#1b2334",
     text: "#b5b5b4",
   };
@@ -55,8 +52,19 @@ const ProblemDetail = () => {
     setConsoleOutput("Run result will appear here.\n> Running... (dummy output)\n");
   };
 
-  const handleSubmit = () => {
-    setConsoleOutput("Submit result will appear here.\n> Submitting... (dummy output)\n");
+  const handleSubmit = async () => {
+    setConsoleOutput("> Submitting code to server...\n");
+    try {
+      const res = await axios.post(
+        "http://localhost:5000/api/submissions",
+        { problemId: problem.id, language, code },
+        { withCredentials: true }
+      );
+      setConsoleOutput(`> Submission successful! Status: ${res.data.status}\n> Waiting for execution...`);
+    } catch (err) {
+      console.error(err);
+      setConsoleOutput("> Error submitting code. Make sure you are logged in.");
+    }
   };
 
   const sectionStyle = {
@@ -68,23 +76,29 @@ const ProblemDetail = () => {
   };
 
   return (
-    <div
+    <Split
+      sizes={[50, 50]}
+      minSize={300}
+      expandToMin={false}
+      gutterSize={10}
+      gutterAlign="center"
+      snapOffset={30}
+      dragInterval={1}
+      direction="horizontal"
+      cursor="col-resize"
       style={{
         display: "flex",
-        flex: 1,
-        minHeight: 0,
-        gap: "24px",
+        width: "100%",
         height: "calc(100vh - 96px)",
       }}
     >
       <div
         style={{
-          flex: "1 1 50%",
-          minWidth: 0,
           overflow: "auto",
           display: "flex",
           flexDirection: "column",
           gap: "16px",
+          paddingRight: "10px",
         }}
       >
         <div
@@ -102,9 +116,7 @@ const ProblemDetail = () => {
           <span>{" > "}</span>
           <Link to="/problems" style={{ color: "#b5b5b4", textDecoration: "none" }} onMouseOver={(e) => { e.target.style.textDecoration = "underline"; }} onMouseOut={(e) => { e.target.style.textDecoration = "none"; }}>Problems</Link>
           <span>{" > "}</span>
-          <Link to={`/problems?topic=${DUMMY_PROBLEM.topic || "Arrays"}`} style={{ color: "#b5b5b4", textDecoration: "none" }} onMouseOver={(e) => { e.target.style.textDecoration = "underline"; }} onMouseOut={(e) => { e.target.style.textDecoration = "none"; }}>{DUMMY_PROBLEM.topic || "Arrays"}</Link>
-          <span>{" > "}</span>
-          <span style={{ color: "#c4c4c4" }}>{DUMMY_PROBLEM.title}</span>
+          <span style={{ color: "#c4c4c4" }}>{problem.title}</span>
         </div>
         <div style={{ marginBottom: "16px" }}>
           <h1
@@ -115,7 +127,7 @@ const ProblemDetail = () => {
               marginBottom: "16px",
             }}
           >
-            {DUMMY_PROBLEM.title}
+            {problem.title}
           </h1>
           <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
             <span
@@ -129,10 +141,10 @@ const ProblemDetail = () => {
                 color: difficultyStyles.text,
               }}
             >
-              {DUMMY_PROBLEM.difficulty}
+              {problem.difficulty}
             </span>
             <span style={{ fontSize: "0.8125rem", color: "#b5b5b4" }}>
-              Problem ID: #{String(DUMMY_PROBLEM.id).padStart(4, "0")}
+              Problem ID: #{String(problem.id).padStart(4, "0")}
             </span>
           </div>
         </div>
@@ -148,16 +160,15 @@ const ProblemDetail = () => {
           >
             Explanation
           </h3>
-          <p
+          <div
             style={{
               fontSize: "0.875rem",
               color: "#b5b5b4",
               lineHeight: 1.6,
-              whiteSpace: "pre-wrap",
             }}
           >
-            {DUMMY_PROBLEM.description}
-          </p>
+            <ReactMarkdown>{problem.description}</ReactMarkdown>
+          </div>
         </div>
 
         <div style={sectionStyle}>
@@ -169,58 +180,64 @@ const ProblemDetail = () => {
               marginBottom: "8px",
             }}
           >
-            Example
+            Examples
           </h3>
-          {DUMMY_PROBLEM.examples.map((ex, idx) => (
-            <div
-              key={idx}
-              style={{
-                marginBottom: idx < DUMMY_PROBLEM.examples.length - 1 ? "14px" : 0,
-                padding: "12px",
-                backgroundColor: "#0d111a",
-                border: "1px solid rgba(255, 255, 255, 0.06)",
-                borderRadius: "8px",
-              }}
-            >
-              <div style={{ marginBottom: "8px" }}>
-                <span style={{ fontSize: "0.75rem", color: "#b5b5b4", fontWeight: "500" }}>
-                  Input:
-                </span>
-                <pre
-                  style={{
-                    marginTop: "4px",
-                    fontSize: "0.8125rem",
-                    color: "#c4c4c4",
-                    fontFamily: "monospace",
-                    overflow: "auto",
-                  }}
-                >
-                  {ex.input}
-                </pre>
+          {(problem.examples || []).length > 0 ? (
+            problem.examples.map((ex, idx) => (
+              <div
+                key={idx}
+                style={{
+                  marginBottom: idx < problem.examples.length - 1 ? "14px" : 0,
+                  padding: "12px",
+                  backgroundColor: "#0d111a",
+                  border: "1px solid rgba(255, 255, 255, 0.06)",
+                  borderRadius: "8px",
+                }}
+              >
+                <div style={{ marginBottom: "8px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#b5b5b4", fontWeight: "500" }}>
+                    Input:
+                  </span>
+                  <pre
+                    style={{
+                      marginTop: "4px",
+                      fontSize: "0.8125rem",
+                      color: "#c4c4c4",
+                      fontFamily: "monospace",
+                      overflow: "auto",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {ex.input}
+                  </pre>
+                </div>
+                <div>
+                  <span style={{ fontSize: "0.75rem", color: "#b5b5b4", fontWeight: "500" }}>
+                    Output:
+                  </span>
+                  <pre
+                    style={{
+                      marginTop: "4px",
+                      fontSize: "0.8125rem",
+                      color: "#c4c4c4",
+                      fontFamily: "monospace",
+                      overflow: "auto",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {ex.output}
+                  </pre>
+                </div>
+                {ex.explanation && (
+                  <p style={{ marginTop: "8px", fontSize: "0.8125rem", color: "#b5b5b4" }}>
+                    {ex.explanation}
+                  </p>
+                )}
               </div>
-              <div>
-                <span style={{ fontSize: "0.75rem", color: "#b5b5b4", fontWeight: "500" }}>
-                  Output:
-                </span>
-                <pre
-                  style={{
-                    marginTop: "4px",
-                    fontSize: "0.8125rem",
-                    color: "#c4c4c4",
-                    fontFamily: "monospace",
-                    overflow: "auto",
-                  }}
-                >
-                  {ex.output}
-                </pre>
-              </div>
-              {ex.explanation && (
-                <p style={{ marginTop: "8px", fontSize: "0.8125rem", color: "#b5b5b4" }}>
-                  {ex.explanation}
-                </p>
-              )}
-            </div>
-          ))}
+            ))
+          ) : (
+            <p style={{ fontSize: "0.8125rem", color: "#b5b5b4" }}>No examples provided.</p>
+          )}
         </div>
 
         <div style={sectionStyle}>
@@ -234,21 +251,25 @@ const ProblemDetail = () => {
           >
             Constraints
           </h3>
-          <ul style={{ margin: 0, paddingLeft: "1.25rem", color: "#b5b5b4", fontSize: "0.875rem", lineHeight: 1.8 }}>
-            {DUMMY_PROBLEM.constraints.map((c, i) => (
-              <li key={i}>{c}</li>
-            ))}
-          </ul>
+          {(problem.constraints || []).length > 0 ? (
+            <ul style={{ margin: 0, paddingLeft: "1.25rem", color: "#b5b5b4", fontSize: "0.875rem", lineHeight: 1.8 }}>
+              {problem.constraints.map((c, i) => (
+                <li key={i}>{c}</li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ fontSize: "0.8125rem", color: "#b5b5b4" }}>No constraints provided.</p>
+          )}
         </div>
       </div>
 
       <div
         style={{
-          flex: "1 1 50%",
           minWidth: 0,
           display: "flex",
           flexDirection: "column",
           gap: "12px",
+          paddingLeft: "10px",
         }}
       >
         <div
@@ -291,7 +312,7 @@ const ProblemDetail = () => {
               <option value="Java">Java</option>
             </select>
           </div>
-          <div style={{ flex: 1, minHeight: 380, display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, minHeight: 450, display: "flex", flexDirection: "column" }}>
             <CodeEditor
               value={code}
               onChange={setCode}
@@ -308,7 +329,7 @@ const ProblemDetail = () => {
             display: "flex",
             alignItems: "center",
             gap: "12px",
-            marginTop: "16px",
+            marginTop: "8px",
           }}
         >
           <button
@@ -323,14 +344,6 @@ const ProblemDetail = () => {
               borderRadius: "8px",
               cursor: "pointer",
               transition: "all 0.2s",
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = "#1b2334";
-              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.12)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = "#1a2233";
-              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
             }}
           >
             Console
@@ -348,12 +361,6 @@ const ProblemDetail = () => {
               cursor: "pointer",
               transition: "all 0.2s",
             }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = "#0f4fd4";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = "#135bec";
-            }}
           >
             Run Code
           </button>
@@ -369,12 +376,6 @@ const ProblemDetail = () => {
               borderRadius: "8px",
               cursor: "pointer",
               transition: "all 0.2s",
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = "#0f4fd4";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = "#135bec";
             }}
           >
             Submit
@@ -414,7 +415,7 @@ const ProblemDetail = () => {
           </pre>
         </div>
       </div>
-    </div>
+    </Split>
   );
 };
 

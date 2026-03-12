@@ -13,6 +13,7 @@ import Submissions from "./pages/Submissions";
 import SubmissionHistory from "./pages/SubmissionHistory";
 import ViewSolution from "./pages/ViewSolution";
 import Profile from "./pages/Profile";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const AppRoutes = () => {
   return (
@@ -32,8 +33,10 @@ const AppRoutes = () => {
         <Route path="submission-history" element={<SubmissionHistory />} />
         <Route path="view-solution/:id" element={<ViewSolution />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="profile/:username" element={<Profile />} />
         <Route path="profile/edit" element={<Profile />} />
         <Route path="teams" element={<Leaderboard />} />
+        <Route path="admin" element={<AdminDashboard />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

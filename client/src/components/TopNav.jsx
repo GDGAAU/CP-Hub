@@ -1,13 +1,14 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const PAGE_BRANDING = {
   problems: {
     icon: "trophy",
     text: (
       <>
-        <span style={{ color: "#c4c4c4" }}>Algo</span>
-        <span style={{ color: "#135bec" }}>Master</span>
+        <span style={{ color: "#c4c4c4" }}>CP-</span>
+        <span style={{ color: "#135bec" }}>HUB</span>
       </>
     ),
   },
@@ -23,8 +24,8 @@ const PAGE_BRANDING = {
     icon: "track",
     text: (
       <>
-        <span style={{ color: "#c4c4c4" }}>Algo</span>
-        <span style={{ color: "#135bec" }}>Track</span>
+        <span style={{ color: "#c4c4c4" }}>CP-</span>
+        <span style={{ color: "#135bec" }}>HUB</span>
       </>
     ),
   },
@@ -32,8 +33,8 @@ const PAGE_BRANDING = {
     icon: "trophy",
     text: (
       <>
-        <span style={{ color: "#c4c4c4" }}>Algo</span>
-        <span style={{ color: "#135bec" }}>Master</span>
+        <span style={{ color: "#c4c4c4" }}>CP-</span>
+        <span style={{ color: "#135bec" }}>HUB</span>
       </>
     ),
   },
@@ -41,8 +42,8 @@ const PAGE_BRANDING = {
     icon: "trophy",
     text: (
       <>
-        <span style={{ color: "#c4c4c4" }}>ALGO</span>
-        <span style={{ color: "#135bec" }}>RANK</span>
+        <span style={{ color: "#c4c4c4" }}>CP-</span>
+        <span style={{ color: "#135bec" }}>HUB</span>
       </>
     ),
   },
@@ -50,8 +51,8 @@ const PAGE_BRANDING = {
     icon: "check",
     text: (
       <>
-        <span style={{ color: "#c4c4c4" }}>Algo</span>
-        <span style={{ color: "#135bec" }}>Track</span>
+        <span style={{ color: "#c4c4c4" }}>CP-</span>
+        <span style={{ color: "#135bec" }}>HUB</span>
       </>
     ),
   },
@@ -94,12 +95,21 @@ const getBrandingForPath = (pathname) => {
   if (pathname === "/submissions") return PAGE_BRANDING.submissions;
   if (pathname.match(/^\/problems\/[^/]+$/)) return PAGE_BRANDING["problems/:id"];
   if (pathname === "/problems") return PAGE_BRANDING.problems;
-  return PAGE_BRANDING.problems;
+  return PAGE_BRANDING.problems; // Or a general CP-HUB branding
 };
 
 const TopNav = () => {
   const location = useLocation();
+  const { user, logout } = useAuth();
   const branding = getBrandingForPath(location.pathname);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   return (
     <header
@@ -181,6 +191,67 @@ const TopNav = () => {
         >
           Leaderboard
         </Link>
+        
+        <div style={{ height: "20px", width: "1px", backgroundColor: "rgba(255, 255, 255, 0.1)", margin: "0 8px" }} />
+
+        {user ? (
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: "0.5rem 1rem",
+              fontSize: "0.875rem",
+              fontWeight: "500",
+              color: "#ef4444",
+              backgroundColor: "transparent",
+              border: "1px solid rgba(239, 68, 68, 0.2)",
+              borderRadius: "10px",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.1)"; }}
+            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+          >
+            Logout
+          </button>
+        ) : (
+          <div style={{ display: "flex", gap: "12px" }}>
+            <Link
+              to="/login"
+              style={{
+                padding: "0.5rem 1rem",
+                fontSize: "0.875rem",
+                fontWeight: "500",
+                color: "#b5b5b4",
+                textDecoration: "none",
+                backgroundColor: "transparent",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                borderRadius: "10px",
+                transition: "all 0.2s",
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.borderColor = "#c4c4c4"; e.currentTarget.style.color = "#c4c4c4"; }}
+              onMouseOut={(e) => { e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)"; e.currentTarget.style.color = "#b5b5b4"; }}
+            >
+              Login
+            </Link>
+            <Link
+              to="/register"
+              style={{
+                padding: "0.5rem 1rem",
+                fontSize: "0.875rem",
+                fontWeight: "500",
+                color: "#fff",
+                backgroundColor: "#135bec",
+                textDecoration: "none",
+                borderRadius: "10px",
+                transition: "all 0.2s",
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = "#0f4fd4"; }}
+              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = "#135bec"; }}
+            >
+              Sign up
+            </Link>
+          </div>
+        )}
       </nav>
     </header>
   );
