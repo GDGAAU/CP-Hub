@@ -1,18 +1,29 @@
-import { Strategy as GoogleStrategy } from "passport-google-oauth2";
-import { Strategy as LocalStrategy } from "passport-local";
+import passportGoogle from "passport-google-oauth2";
+import passportLocal from "passport-local";
 import "dotenv/config";
 import passport from "passport";
 import User from "../models/userModel.js";
 import bcrypt from "bcrypt";
 
+// Handle potential ESM/CJS interop for Strategies
+const GoogleStrategy = passportGoogle.Strategy || passportGoogle.OAuth2Strategy;
+const LocalStrategy = passportLocal.Strategy;
+
 const configurePassport = () => {
+  if (!LocalStrategy) {
+     console.error("FATAL: LocalStrategy is not defined!");
+  }
+  if (!GoogleStrategy) {
+     console.error("FATAL: GoogleStrategy is not defined!");
+  }
+
   passport.use(
     "local",
     new LocalStrategy(async (username, password, cb) => {
       try {
         const user = await User.byEmailUsername(username);
         if (!user) {
-          cb(null, false, { message: "User or email not found" });
+          return cb(null, false, { message: "User or email not found" });
         }
         bcrypt.compare(password, user.password, (err, valid) => {
           if (err) return cb(err);
@@ -24,23 +35,18 @@ const configurePassport = () => {
       }
     }),
   );
-  // admins are not allowed to use google to signup
+
   passport.use(
     "google",
     new GoogleStrategy(
       {
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL,
+        clientID: process.env.GOOGLE_CLIENT_ID || 'dummy',
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'dummy',
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback',
       },
       async (accessToken, refreshToken, profile, cb) => {
         try {
           const user = await User.byEmail(profile.email);
-          // Looks for the user by email in the database:
-          // if found send the user data
-          // if not adds the new user to the database
-
-          // The userModel returns either null or the row value
           if (!user) {
             const { id, displayName, emails, photos } = profile;
             const email = emails[0]?.value;
@@ -64,9 +70,11 @@ const configurePassport = () => {
       },
     ),
   );
+
   passport.serializeUser((user, cb) => {
     cb(null, user.id);
   });
+
   passport.deserializeUser(async (id, cb) => {
     try {
       const user = await User.byId(id);
